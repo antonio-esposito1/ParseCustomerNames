@@ -1,0 +1,1407 @@
+!! IOS XR Configuration version = 6.5.3
+!! Last configuration change at Thu Jun 17 12:38:12 2021 by antonio
+!
+hostname MIVPE035
+logging 10.192.10.8 vrf default port default
+logging source-interface Loopback0
+telnet vrf default ipv4 server max-servers 10
+tacacs source-interface MgmtEth0/RP0/CPU0/0 vrf default
+tacacs-server host 172.16.1.83 port 49
+ key 7 094F471A1A0A
+!
+tacacs-server host 172.16.1.1 port 49
+ key 7 094F471A1A0A
+!
+username admin
+ group root-lr
+ group cisco-support
+ secret 5 $1$pXe4$lxog4OcK0GKL2kQX8NUZ70
+!
+aaa group server tacacs+ tacacs_lab
+ server 172.16.1.83
+ server 172.16.1.1
+!
+aaa authentication login default group tacacs_lab local
+cdp
+vrf VIPX
+ address-family ipv4 unicast
+  import route-target
+   34419:10026
+  !
+  export route-target
+   34419:10026
+   34419:10188
+  !
+ !
+!
+vrf OPNET
+ address-family ipv4 unicast
+  import route-policy GRX
+  import route-target
+   30722:1
+   30722:2
+   30722:1000
+   30722:1101
+   30722:1102
+  !
+  export route-policy SET_ROUTE_TARGET
+  export route-target
+   30722:1000
+  !
+ !
+!
+vrf IT_MGMT
+ address-family ipv4 unicast
+  import route-target
+   30722:10760
+  !
+  export route-target
+   30722:10760
+  !
+ !
+!
+vrf DSL_AUTH
+ address-family ipv4 unicast
+  import route-target
+   30722:3100
+  !
+  export route-target
+   30722:3100
+  !
+ !
+!
+vrf DSL_DATA
+ address-family ipv4 unicast
+  import route-policy DSL_IMPORT_MAP
+  import route-target
+   30722:3000
+   30722:3003
+   30722:3004
+   30722:3005
+   30722:3006
+  !
+  export route-target
+   30722:3000
+  !
+ !
+!
+vrf INTERNET
+ address-family ipv4 unicast
+  import route-policy INTERNET_IMPORT_MAP
+  import route-target
+   30722:3000
+   30722:3010
+  !
+  export route-target
+   30722:3000
+   30722:3011
+  !
+ !
+ address-family ipv6 unicast
+  import route-policy INTERNET_IMPORT_MAP
+  import route-target
+   30722:3000
+   30722:3010
+  !
+  export route-target
+   30722:3000
+   30722:3011
+  !
+ !
+!
+vrf MANAGEMENT
+ address-family ipv4 unicast
+  import route-target
+   30722:8000
+   30722:8001
+  !
+  export route-target
+   30722:8001
+  !
+ !
+ address-family ipv6 unicast
+  import route-target
+   30722:8000
+   30722:8001
+  !
+  export route-target
+   30722:8001
+  !
+ !
+!
+vrf VIPNET_OAM
+ address-family ipv4 unicast
+  import route-target
+   30722:2300
+  !
+  export route-target
+   30722:2300
+  !
+ !
+ address-family ipv6 unicast
+  import route-target
+   30722:2300
+  !
+  export route-target
+   30722:2300
+  !
+ !
+!
+vrf UNTRUSTED_MGMT
+ address-family ipv4 unicast
+  import route-target
+   30722:1410
+  !
+  export route-target
+   30722:1410
+  !
+ !
+!
+line template TACACS
+ exec-timeout 240 0
+ length 20
+ access-class ingress acl_99
+ transport input telnet ssh
+!
+vty-pool default 0 4 line-template TACACS
+snmp-server ifindex persist
+snmp-server host 10.192.10.7 traps version 2c kinte
+snmp-server host 10.192.10.8 traps version 2c kinte
+snmp-server community kinte RO SystemOwner IPv4 acl_50
+ntp
+ server 10.178.6.20
+ server 10.178.6.28
+ server 10.178.147.176
+ server 10.178.147.205
+!
+tftp client source-interface MgmtEth0/RP0/CPU0/0
+call-home
+ service active
+ contact smart-licensing
+ profile CiscoTAC-1
+  active
+  destination transport-method http
+ !
+!
+ipv4 access-list acl_50
+ 10 remark Snmp Server Xspotter
+ 400 remark SNMP server CEM Provvisori
+ 410 permit ipv4 host 10.192.10.7 any
+ 420 permit ipv4 host 10.192.10.8 any
+!
+ipv4 access-list acl_99
+ 10 permit ipv4 host 10.192.10.7 any
+ 20 permit ipv4 host 10.192.10.8 any
+ 30 permit ipv4 172.16.0.0/23 any
+!
+ipv4 prefix-list VIPNET_LOOPBACK
+ 10 permit 0.0.0.0/0 eq 32
+!
+policy-map OPTIMA_BE
+ class class-default
+  set mpls experimental imposition 0
+ ! 
+ end-policy-map
+! 
+interface Bundle-Ether731
+ description Bundle 2 x 10Gb to MIVCE031
+ mtu 9216
+ bundle minimum-active links 1
+ load-interval 30
+ dampening 1 750 2000 4
+!
+interface Bundle-Ether731.71
+ description MIVCE031 vrf MANAGEMENT
+ mtu 1518
+ service-policy input OPTIMA_BE
+ vrf MANAGEMENT
+ ipv4 address 10.178.189.210 255.255.255.248
+ ipv4 unreachables disable
+ encapsulation dot1q 71
+!
+interface Bundle-Ether731.72
+ description to RMVCE031 (GRT)
+ mtu 1518
+ service-policy input OPTIMA_BE
+ ipv4 address 10.176.26.18 255.255.255.248
+ ipv4 unreachables disable
+ encapsulation dot1q 72
+!
+interface Bundle-Ether731.1001
+ description LAN Vrf VIPNET_OAM verso MIVCE031
+ mtu 1518
+ vrf VIPNET_OAM
+ ipv4 address 10.178.49.17 255.255.255.252
+ arp timeout 1500
+ ipv4 unreachables disable
+ ipv6 address 2001::10:178:49:19/127
+ encapsulation dot1q 1001
+!
+interface Bundle-Ether731.1051
+ description LAN Vrf OPNET verso MIVCE031
+ mtu 1518
+ vrf OPNET
+ ipv4 address 10.188.65.33 255.255.255.252
+ arp timeout 1500
+ ipv4 unreachables disable
+ encapsulation dot1q 1051
+!
+interface Loopback0
+ ipv4 address 10.176.1.41 255.255.255.255
+ ipv6 address 2001::10:176:1:41/128
+!
+interface Loopback1
+ vrf OPNET
+ ipv4 address 1.1.1.1 255.255.255.255
+!
+interface MgmtEth0/RP0/CPU0/0
+ ipv4 address 172.16.1.35 255.255.254.0
+!
+interface GigabitEthernet0/0/0/0
+ description link to mivar102
+ cdp
+ ipv4 address 10.176.81.54 255.255.255.254
+ ipv6 address 2001::10:176:81:53/127
+!
+interface GigabitEthernet0/0/0/1
+ description Link to MIVPE036
+ cdp
+ ipv4 address 10.176.82.28 255.255.255.254
+ ipv6 address 2001::10:176:82:28/127
+!
+interface GigabitEthernet0/0/0/2
+ description Link to MIVCE031
+ bundle id 731 mode active
+ cdp
+!
+interface GigabitEthernet0/0/0/3
+ description link to mibng037
+ cdp
+ ipv4 address 10.176.28.105 255.255.255.252
+!
+interface GigabitEthernet0/0/0/3.1037 l2transport
+ description L2 Overlay to MIBNG037
+ encapsulation dot1ad 1037
+ rewrite ingress tag pop 1 symmetric
+!
+interface GigabitEthernet0/0/0/4
+ description Link to MIFSN030
+ cdp
+!
+interface GigabitEthernet0/0/0/4.991
+ description Bundle 200Gb to MIFSN030 NorthBound - Management Traffic
+ ipv4 address 10.176.76.153 255.255.255.252
+ ipv4 unreachables disable
+ load-interval 30
+ encapsulation dot1q 991
+!
+interface GigabitEthernet0/0/0/4.993
+ description Bundle 200Gb to NorthBound to MIFSN030 NorthBound  DSL_AUTH traffic
+ vrf DSL_AUTH
+ ipv4 address 10.177.88.41 255.255.255.252
+ encapsulation dot1q 993
+!
+interface GigabitEthernet0/0/0/4.995
+ description Bundle 300Gb to MIFSN030 NorthBound - INTERNET traffic
+ mtu 1518
+ vrf INTERNET
+ ipv4 address 10.177.21.73 255.255.255.252
+ ipv6 nd suppress-ra
+ ipv6 address 2a01:8d0:e:202:1::a/127
+ encapsulation dot1q 995
+!
+interface GigabitEthernet0/0/0/5
+ description Link to MIFSN030-CGN
+ cdp
+!
+interface GigabitEthernet0/0/0/5.1037 l2transport
+ description MIBNG037 - L2 Overlay to Service-Node
+ encapsulation dot1ad 1037
+ rewrite ingress tag pop 1 symmetric
+!
+interface GigabitEthernet0/0/0/6
+ description Link to MIVMX096
+ cdp
+!
+interface GigabitEthernet0/0/0/6.761
+ description interface to LAN Servizi (MIVMX096)
+ mtu 1518
+ vrf IT_MGMT
+ ipv4 address 10.177.44.1 255.255.255.252
+ ipv4 unreachables disable
+ encapsulation dot1q 761
+!
+interface GigabitEthernet0/0/0/6.815
+ description Bundle to MIVMX096 (Segregation OPNET-MGMT)
+ vrf OPNET
+ ipv4 address 10.192.33.185 255.255.255.252
+ encapsulation dot1q 815
+!
+interface GigabitEthernet0/0/0/6.850
+ description Bundle to MIVMX096 (FW Segregation)
+ vrf MANAGEMENT
+ ipv4 address 10.178.144.225 255.255.255.252
+ encapsulation dot1q 850
+!
+interface GigabitEthernet0/0/0/6.851
+ description Bundle to MIVMX096 UNTRUSTED_MGMT
+ vrf UNTRUSTED_MGMT
+ ipv4 address 10.178.33.241 255.255.255.252
+ encapsulation dot1q 851
+!
+interface GigabitEthernet0/0/0/6.894
+ description interface to LAN Servizi (MIVMX096)
+ mtu 1518
+ vrf DSL_DATA
+ ipv4 address 10.177.21.25 255.255.255.252
+ ipv4 unreachables disable
+ encapsulation dot1q 894
+!
+interface GigabitEthernet0/0/0/7
+ description Link to MI3OBG05
+ cdp
+!
+interface GigabitEthernet0/0/0/7.801
+ description LAN VRF OPNET to MI3OBG05
+ vrf OPNET
+ ipv4 address 10.188.17.41 255.255.255.252
+ encapsulation dot1q 801
+!
+interface GigabitEthernet0/0/0/8
+ description Link to MIVMX337
+ cdp
+!
+interface GigabitEthernet0/0/0/8.50
+ description to remote GRX-FW (VIPX) trough L2 NEXUS (LS)
+ vrf VIPX
+ ipv4 address 83.224.109.225 255.255.255.248
+ encapsulation dot1q 50
+!
+interface GigabitEthernet0/0/0/8.100
+ description to remote GRX-FW (OPNET) trough L2 NEXUS (LS)
+ vrf OPNET
+ ipv4 address 10.192.38.233 255.255.255.248
+ encapsulation dot1q 100
+!
+extcommunity-set rt comm_GRX_rome
+  30722:2
+end-set
+!
+extcommunity-set rt comm_GRX_milan
+  30722:1
+end-set
+!
+extcommunity-set rt comm_GRX_primary_rome
+  30722:1102
+end-set
+!
+extcommunity-set rt comm_GRX_primary_milan
+  30722:1101
+end-set
+!
+extcommunity-set opaque BLU
+  10
+end-set
+!
+extcommunity-set opaque RED
+  20
+end-set
+!
+extcommunity-set opaque GREEN
+  30
+end-set
+!
+extcommunity-set opaque ORANGE
+  40
+end-set
+!
+extcommunity-set opaque YELLOW
+  50
+end-set
+!
+prefix-set pfx_BLU
+  1.1.1.1/32
+end-set
+!
+prefix-set pfx_RED
+  2.2.2.2/32
+end-set
+!
+prefix-set pfx_GREEN
+  3.3.3.3/32
+end-set
+!
+prefix-set pfx_acl_3
+  10.0.0.0/8 ge 8,
+  172.16.0.0/16 ge 16,
+  194.20.90.0/23 ge 23,
+  194.20.92.0/23 ge 23,
+  83.224.0.0/16 ge 16,
+  172.31.0.0/16 ge 16,
+  131.228.0.0/16 ge 16,
+  91.80.37.16/28 ge 28,
+  145.230.208.0/23 ge 23,
+  195.233.38.192/26 ge 26,
+  195.233.50.0/28 ge 28,
+  195.233.61.0/24 ge 24,
+  198.133.219.53/32,
+  47.73.31.0/25 ge 25,
+  47.73.24.80/28 ge 28,
+  47.73.25.96/27 ge 27,
+  47.73.29.0/24 ge 24,
+  47.73.114.64/29,
+  47.73.114.72/29
+end-set
+!
+prefix-set pfx_ORANGE
+  4.4.4.4/32
+end-set
+!
+prefix-set pfx_YELLOW
+  5.5.5.5/32
+end-set
+!
+prefix-set pfx_acl_55
+  62.13.160.40/30 ge 30,
+  151.2.224.48/28 ge 28,
+  83.224.44.64/29 ge 29,
+  213.213.18.193/32,
+  213.213.18.194/32,
+  151.58.187.0/28 ge 28
+end-set
+!
+prefix-set pfx_L2_into_L1
+  10.176.0.0/24 ge 24,
+  10.176.1.0/24 ge 24,
+  10.176.2.0/24 ge 24,
+  10.176.3.0/24 ge 24,
+  10.176.5.0/24 ge 24,
+  10.192.10.0/24,
+  10.192.11.244/32,
+  10.192.12.112/28,
+  10.178.6.0/24,
+  10.192.42.176/28,
+  10.192.23.0/25,
+  10.129.181.29/32,
+  10.132.181.0/24,
+  10.178.20.0/22,
+  10.169.180.0/22,
+  # MEM
+  10.178.131.32/27,
+  # BNG Tool SET
+  10.169.188.0/23
+end-set
+!
+prefix-set pfx_CLNS_STATIC
+  255.255.255.255/32,
+  10.0.0.0/8
+end-set
+!
+prefix-set pfx_DEFAULT_IPv4
+  0.0.0.0/0
+end-set
+!
+prefix-set pfx_DEFAULT_IPv6
+  ::/0
+end-set
+!
+prefix-set pfx_ENE_NOC_SUBNETS
+  85.205.247.192/26 le 32,
+  #queste sotto lato lan servizi Filtrate dal 6-3-20
+  85.205.61.64/27 le 32,
+  10.105.26.0/23 le 32,
+  62.95.207.16/28 ge 28,
+  62.95.207.32/27 ge 27,
+  85.205.100.192/26 le 32,
+  10.105.144.0/24 le 32,
+  62.95.207.80/28 ge 28,
+  # Flussi to MAN INTERNET
+  10.192.10.0/24 le 32,
+  10.178.6.0/24 le 32,
+  10.178.20.192/28,
+  10.178.131.32/27,
+  10.178.152.168/29,
+  # MIVTR052    
+  10.178.147.205/32,
+  # RMVTR042
+  10.178.203.176/32
+end-set
+!
+prefix-set pfx_OPNET_FROM_MGMT
+  10.192.10.0/24
+end-set
+!
+prefix-set pfx_PERMIT_ANY_le29
+  0.0.0.0/0 le 29
+end-set
+!
+prefix-set pfx_VIPNET_OAM_MGMT
+  10.178.38.0/23 le 32,
+  10.178.40.0/21 le 32
+end-set
+!
+prefix-set pfx_TO_ENE_NOC_DEFAULT
+  0.0.0.0/0
+end-set
+!
+prefix-set pfx_OPNET_OSPF_NOEXPORT
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_PERMIT_ANY_IPv6_le56
+  ::/0 le 56
+end-set
+!
+prefix-set pfx_OPNET_SUPERNET_ALLOWED
+  10.0.0.0/8 ge 8,
+  172.16.0.0/16 ge 16,
+  194.20.90.0/24 ge 24,
+  194.20.91.0/24 ge 24,
+  194.20.92.0/24 ge 24,
+  194.20.93.0/24 ge 24,
+  83.224.0.0/16 ge 16,
+  172.31.0.0/16 ge 16,
+  91.80.37.13/32,
+  91.80.37.167/32
+end-set
+!
+prefix-set pfx_DSL_AUTH_STATIC_PRIMARY
+  # dummy broadcast subnet, to define the prefix-set for the first time
+  255.255.255.255/32,
+  10.177.88.33/32
+end-set
+!
+prefix-set pfx_MGMT_FROM_UNTRUSTED_MGMT
+  255.255.255.255/32,
+  10.178.33.0/25,
+  10.178.33.128/25,
+  10.178.78.0/24,
+  10.178.79.0/24,
+  # NVI_MANAGEMENT  
+  10.205.160.0/20 le 21,
+  # New Subnet Probes
+  10.178.84.0/24 le 30,
+  #AccessoSSHsenzaMacchinaPonte
+  10.133.207.0/24 le 32
+end-set
+!
+prefix-set pfx_DSL_AUTH_STATIC_SECONDARY
+  # dummy broadcast subnet, to define the prefix-set for the first time
+  255.255.255.255/32,
+  10.177.88.34/32
+end-set
+!
+prefix-set pfx_MANAGEMENT_STATIC_PRIMARY
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_DSL_AUTH_CONNECTED_PRIMARY
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_INTERNET_CONNECTED_PRIMARY
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_MANAGEMENT_STATIC_NOEXPORT
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_DSL_AUTH_CONNECTED_NOEXPORT
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_INTERNET_CONNECTED_NOEXPORT
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_VIPNET_OAM_CONNECTED_PRIMARY
+  255.255.255.255/32
+end-set
+!
+prefix-set pfx_VIPNET_OAM_CONNECTED_NOEXPORT
+  255.255.255.255/32
+end-set
+!
+community-set std_comm_24
+  30722:31011
+end-set
+!
+community-set std_comm_25
+  30722:31012
+end-set
+!
+community-set std_comm_26
+  30722:33011
+end-set
+!
+community-set std_comm_27
+  30722:33012
+end-set
+!
+community-set comm_DEFAULT_MI3
+  30722:33013
+end-set
+!
+community-set comm_DEFAULT_MI4
+  30722:33035
+end-set
+!
+community-set comm_DSL_FRONTEND_MI5
+  30722:31000
+end-set
+!
+community-set comm_DSL_FRONTEND_RM3
+  30722:33000
+end-set
+!
+community-set std_comm_vipx_primary
+  64587:1001
+end-set
+!
+community-set comm_DSL_EVO_exception
+  30722:3130
+end-set
+!
+community-set std_comm_vipx_secondary
+  64587:1000
+end-set
+!
+community-set comm_DSL_EVO_exception_NO_INTERNET
+  30722:2100
+end-set
+!
+community-set comm_INTERNET_VPE_TO_FSN_LOOP_AVOIDANCE
+  30722:2010
+end-set
+!
+route-policy GRX
+  if (extcommunity rt matches-any comm_GRX_milan) then
+    set local-preference 100
+  elseif (extcommunity rt matches-any comm_GRX_rome) then
+    set local-preference 50
+  elseif (extcommunity rt matches-any comm_GRX_primary_milan) then
+    set local-preference 100
+  elseif (extcommunity rt matches-any comm_GRX_primary_rome) then
+    set local-preference 200
+  else
+    pass
+  endif
+end-policy
+!
+route-policy PIC
+  set path-selection backup 1 install multipath-protect
+end-policy
+!
+route-policy SID($SID)
+  set label-index $SID
+end-policy
+!
+route-policy DENY_ALL
+  drop
+end-policy
+!
+route-policy L2_into_L1
+  if (destination in pfx_L2_into_L1) then
+    pass
+  endif
+end-policy
+!
+route-policy PERMIT_ALL
+  pass
+end-policy
+!
+route-policy CLNS_STATIC
+  if (destination in pfx_CLNS_STATIC) then
+    pass
+  elseif tag is 44957 then
+    pass
+  endif
+end-policy
+!
+route-policy STATIC2ISIS
+  if destination in (10.0.0.0/8) then
+    pass
+  endif
+end-policy
+!
+route-policy VIPX_SET_LP
+  if (community matches-any std_comm_vipx_primary) then
+    set local-preference 300
+  elseif (community matches-any std_comm_vipx_secondary) then
+    pass
+  endif
+end-policy
+!
+route-policy DSL_IMPORT_MAP
+  if (community matches-any std_comm_24) then
+    set local-preference 200
+  elseif (community matches-any std_comm_25) then
+    set local-preference 150
+  elseif (community matches-any std_comm_26) then
+    set local-preference 300
+  elseif (community matches-any std_comm_27) then
+    set local-preference 250
+  else
+    pass
+  endif
+end-policy
+!
+route-policy DSL_TO_ENE_NOC
+  if (destination in pfx_TO_ENE_NOC_DEFAULT) then
+    pass
+  endif
+end-policy
+!
+route-policy PERMIT_ENE_NOC
+  if (destination in pfx_ENE_NOC_SUBNETS) then
+    set local-preference 150
+    set community (30722:3110)
+  endif
+end-policy
+!
+route-policy MGMT_FROM_OPNET
+  if (destination in pfx_DEFAULT_IPv4) then
+    pass
+  elseif (destination in pfx_MGMT_FROM_UNTRUSTED_MGMT) then
+    pass
+  endif
+end-policy
+!
+route-policy OPNET_FROM_MGMT
+  if (destination in pfx_OPNET_FROM_MGMT) then
+    pass
+  endif
+end-policy
+!
+route-policy SET_ROUTE_TARGET
+  if (destination in pfx_acl_55) then
+    set extcommunity rt (30722:1101)
+  elseif (destination in pfx_acl_3) then
+    set extcommunity rt (30722:1000)
+  else
+    set extcommunity rt (30722:1)
+  endif
+end-policy
+!
+route-policy OPNET_BGP_TO_OSPF
+  if (destination in pfx_OPNET_SUPERNET_ALLOWED) then
+    pass
+  endif
+end-policy
+!
+route-policy OPNET_OSPF_TO_BGP
+  if (destination in pfx_OPNET_OSPF_NOEXPORT) then
+    drop
+  else
+    pass
+  endif
+end-policy
+!
+route-policy INTERNET_IMPORT_MAP
+  if (community matches-any comm_DSL_FRONTEND_MI5) then
+    set local-preference 400
+  elseif (community matches-any comm_DSL_FRONTEND_RM3) then
+    set local-preference 350
+  elseif (community matches-any comm_DEFAULT_MI4) then
+    set local-preference 300
+  elseif (community matches-any comm_DEFAULT_MI3) then
+    set local-preference 250
+  else
+    pass
+  endif
+end-policy
+!
+route-policy DSL_AUTH_STATIC_TO_BGP
+  if (destination in pfx_DSL_AUTH_STATIC_PRIMARY) then
+    set local-preference 200
+  elseif (destination in pfx_DSL_AUTH_STATIC_SECONDARY) then
+    set weight 0
+    # this default pass policy will permit all the other static routes,
+    # also those with an active/active approach
+  else
+    pass
+  endif
+end-policy
+!
+route-policy SN_TO_INTERNET_Ingress
+  if (community matches-any comm_DSL_EVO_exception) then
+    set community (30722:3132) additive
+  elseif (destination in pfx_PERMIT_ANY_le29) then
+    set community (30722:3132) additive
+  elseif (destination in pfx_BLU) then
+    set extcommunity color BLU
+  elseif (destination in pfx_RED) then
+    set extcommunity color RED
+  elseif (destination in pfx_GREEN) then
+    set extcommunity color GREEN
+  elseif (destination in pfx_ORANGE) then
+    set extcommunity color ORANGE
+  elseif (destination in pfx_YELLOW) then
+    set extcommunity color YELLOW
+  endif
+end-policy
+!
+route-policy UNTRUSTED_MGMT_FROM_LS
+  if (destination in pfx_DEFAULT_IPv4) then
+    pass
+  endif
+end-policy
+!
+route-policy VIPNET_OAM_OSPF_TO_BGP
+  if (destination in pfx_VIPNET_OAM_MGMT) then
+    pass
+  endif
+end-policy
+!
+route-policy MANAGEMENT_STATIC_TO_BGP
+  if (destination in pfx_MANAGEMENT_STATIC_NOEXPORT) then
+    drop
+  elseif (destination in pfx_MANAGEMENT_STATIC_PRIMARY) then
+    set local-preference 200
+  else
+    pass
+  endif
+end-policy
+!
+route-policy PERMIT_ALL_SET_COMMUNITY
+  set community (30722:2010) additive
+end-policy
+!
+route-policy PERMIT_DEFAULT_ONLY_IPv4
+  if (destination in pfx_DEFAULT_IPv4) then
+    pass
+  endif
+end-policy
+!
+route-policy PERMIT_DEFAULT_ONLY_IPv6
+  if (destination in pfx_DEFAULT_IPv6) then
+    pass
+  endif
+end-policy
+!
+route-policy DSL_AUTH_CONNECTED_TO_BGP
+  # connected networks that we don't want to redistribute for security reasons
+  if (destination in pfx_DSL_AUTH_CONNECTED_NOEXPORT) then
+    drop
+  elseif (destination in pfx_DSL_AUTH_CONNECTED_PRIMARY) then
+    set local-preference 200
+    # this default pass policy will permit all the other connected routes,
+    # also those with an active/active approach
+  else
+    pass
+  endif
+end-policy
+!
+route-policy INTERNET_CONNECTED_TO_BGP
+  if (destination in pfx_INTERNET_CONNECTED_NOEXPORT) then
+    drop
+  elseif (destination in pfx_INTERNET_CONNECTED_PRIMARY) then
+    set local-preference 200
+    set community (30722:3132)
+  else
+    set community (30722:3132)
+  endif
+end-policy
+!
+route-policy IPV6_VIPNET_OAM_BGP_TO_OSPF
+  pass
+end-policy
+!
+route-policy IPV6_VIPNET_OAM_OSPF_TO_BGP
+  pass
+end-policy
+!
+route-policy IPv6_SN_TO_INTERNET_Ingress
+  if (community matches-any comm_INTERNET_VPE_TO_FSN_LOOP_AVOIDANCE) then
+    drop
+  elseif (community matches-any comm_DSL_EVO_exception) then
+    set community (30722:3132) additive
+  elseif (community matches-any comm_DSL_EVO_exception_NO_INTERNET) then
+    pass
+  elseif (destination in pfx_PERMIT_ANY_IPv6_le56) then
+    set community (30722:3132) additive
+  endif
+end-policy
+!
+route-policy VIPNET_OAM_CONNECTED_TO_BGP
+  # connected networks that we dont want to redistribute for security reasons
+  if (destination in pfx_VIPNET_OAM_CONNECTED_NOEXPORT) then
+    drop
+  elseif (destination in pfx_VIPNET_OAM_CONNECTED_PRIMARY) then
+    set local-preference 200
+    # this default pass policy will permit all the other connected subnets,
+    # also those with an active/active approach
+  else
+    pass
+  endif
+end-policy
+!
+route-policy PERMIT_ALL_IPv6_SET_COMMUNITY
+  set community (30722:2010) additive
+end-policy
+!
+router static
+ address-family ipv4 unicast
+  10.0.0.0/8 Bundle-Ether731.72 10.176.26.20 description serve-per-raggiungera-la-mgm
+  10.176.5.72/32 GigabitEthernet0/0/0/4.991 10.176.76.154 tag 44957 description MIFSN030_loopback0_primary
+  10.176.5.73/32 GigabitEthernet0/0/0/4.991 10.176.76.154 200 tag 44957 description MIFSN031_loopback0_secondary
+ !
+ vrf VIPX
+  address-family ipv4 unicast
+   83.224.83.244/32 GigabitEthernet0/0/0/8.50 83.224.109.228
+  !
+ !
+ vrf DSL_AUTH
+  address-family ipv4 unicast
+   10.177.88.33/32 GigabitEthernet0/0/0/4.993 10.177.88.42 description MIFSN030_DSL_AUTH_loop_primary
+   10.177.88.34/32 GigabitEthernet0/0/0/4.993 10.177.88.42 200 description MIFSN031_DSL_AUTH_loop_second
+  !
+ !
+ vrf MANAGEMENT
+  address-family ipv4 unicast
+   10.176.0.0/16 Bundle-Ether731.71 10.178.189.212 201 description route_to_GRT_LAN
+  !
+ !
+!
+router isis CORE
+ net 49.cafe.0101.7600.1041.00
+ distribute link-state
+ log adjacency changes
+ lsp-gen-interval maximum-wait 5000 initial-wait 1 secondary-wait 20
+ lsp-refresh-interval 65000
+ max-lsp-lifetime 65535
+ flex-algo 128
+  priority 100
+  metric-type delay
+  advertise-definition
+ !
+ address-family ipv4 unicast
+  metric-style wide level 1
+  metric-style wide level 2
+  microloop avoidance segment-routing
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+  summary-prefix 10.176.5.64/26 level 1
+  propagate level 2 into level 1 route-policy L2_into_L1
+  redistribute static level-2 metric 100 route-policy CLNS_STATIC
+  segment-routing mpls sr-prefer
+  spf prefix-priority high VIPNET_LOOPBACK
+  mpls ldp auto-config
+ !
+ interface Loopback0
+  passive
+  circuit-type level-2-only
+  hello-padding disable
+  address-family ipv4 unicast
+   prefix-sid index 1015
+   prefix-sid algorithm 128 index 6007
+  !
+  address-family ipv6 unicast
+  !
+ !
+ interface GigabitEthernet0/0/0/0
+  circuit-type level-2-only
+  point-to-point
+  hello-padding disable
+  address-family ipv4 unicast
+   fast-reroute per-prefix level 2
+   fast-reroute per-prefix ti-lfa level 2
+   metric 200 level 2
+  !
+  address-family ipv6 unicast
+   fast-reroute per-prefix level 2
+   fast-reroute per-prefix ti-lfa level 2
+   metric 200 level 2
+  !
+ !
+ interface GigabitEthernet0/0/0/1
+  point-to-point
+  hello-padding disable
+  address-family ipv4 unicast
+   fast-reroute per-prefix level 2
+   fast-reroute per-prefix ti-lfa level 2
+   metric 5 level 1
+   metric 100 level 2
+  !
+  address-family ipv6 unicast
+   fast-reroute per-prefix level 2
+   fast-reroute per-prefix ti-lfa level 2
+   metric 5 level 1
+   metric 100 level 2
+  !
+ !
+ interface GigabitEthernet0/0/0/3
+  circuit-type level-1
+  point-to-point
+  hello-padding disable
+  address-family ipv4 unicast
+   metric 1000 level 1
+  !
+ !
+!
+router ospf 249
+ vrf OPNET
+  router-id 10.176.1.41
+  domain-id type 0005 value 000000f90200
+  redistribute bgp 30722 route-policy OPNET_BGP_TO_OSPF
+  area 0
+   interface Bundle-Ether731.1051
+    network point-to-point
+   !
+  !
+ !
+ vrf VIPNET_OAM
+  router-id 10.176.1.41
+  domain-id type 0005 value 000000f90200
+  area 1.1.0.3
+   nssa no-redistribution no-summary
+   interface Bundle-Ether731.1001
+    network point-to-point
+   !
+  !
+ !
+!
+router ospf CORE
+ router-id 10.176.1.41
+ fast-reroute per-prefix
+ fast-reroute per-prefix ti-lfa enable
+ distance 116
+ area 0
+  segment-routing mpls
+  interface Loopback0
+   passive enable
+   prefix-sid index 1015
+  !
+  interface GigabitEthernet0/0/0/0
+   network point-to-point
+  !
+  interface GigabitEthernet0/0/0/1
+   network point-to-point
+  !
+ !
+!
+router ospfv3 249
+ vrf VIPNET_OAM
+  router-id 10.176.1.41
+  domain-id type 0005 value 000000f90200
+  redistribute bgp 30722 route-policy IPV6_VIPNET_OAM_BGP_TO_OSPF
+  area 1.1.0.3
+   nssa no-redistribution no-summary
+   interface Bundle-Ether731.1001
+   !
+  !
+ !
+!
+router bgp 30722
+ bgp router-id 10.176.1.41
+ bgp log neighbor changes detail
+ address-family ipv4 unicast
+  network 10.176.1.41/32 route-policy SID(1015)
+  allocate-label all
+ !
+ address-family vpnv4 unicast
+  advertise best-external
+  additional-paths selection route-policy PIC
+ !
+ address-family vpnv6 unicast
+ !
+ address-family l2vpn evpn
+ !
+ address-family link-state link-state
+ !
+ address-family ipv4 sr-policy
+ !
+ neighbor-group VIPNET_RR_ASR9K
+  remote-as 30722
+  update-source Loopback0
+  address-family ipv4 labeled-unicast
+  !
+  address-family vpnv4 unicast
+  !
+  address-family vpnv6 unicast
+  !
+  address-family l2vpn evpn
+  !
+  address-family link-state link-state
+  !
+  address-family ipv4 sr-policy
+  !
+ !
+ neighbor 10.176.2.20
+  use neighbor-group VIPNET_RR_ASR9K
+  description BGP RR MIVRR101
+ !
+ neighbor 10.176.2.77
+  use neighbor-group VIPNET_RR_ASR9K
+  description BGP RR BOVRR201F
+ !
+ vrf VIPX
+  rd 30722:4018101035
+  address-family ipv4 unicast
+  !
+  neighbor 83.224.83.244
+   remote-as 64587
+   ebgp-multihop 10
+   timers 10 30
+   description IPBB VIPX to MI3obg05
+   address-family ipv4 unicast
+    route-policy VIPX_SET_LP in
+    route-policy PERMIT_ALL out
+   !
+  !
+ !
+ vrf OPNET
+  rd 30722:1001101035
+  address-family ipv4 unicast
+   redistribute ospf 249 match internal external nssa-external route-policy OPNET_OSPF_TO_BGP
+  !
+  neighbor 10.188.17.42
+   remote-as 64587
+   timers 5 15
+   description eBGP to MI3OBG05
+   ttl-security
+   address-family ipv4 unicast
+    route-policy PERMIT_ALL in
+    allowas-in 1
+    route-policy DENY_ALL out
+   !
+  !
+  neighbor 10.192.33.186
+   remote-as 65540
+   address-family ipv4 unicast
+    route-policy OPNET_FROM_MGMT in
+    route-policy PERMIT_ALL out
+   !
+  !
+ !
+ vrf IT_MGMT
+  rd 30722:1760101035
+  address-family ipv4 unicast
+  !
+  neighbor 10.177.44.2
+   remote-as 65540
+   description eBGP session to CE MIVMX096
+   address-family ipv4 unicast
+    route-policy PERMIT_ALL in
+    route-policy PERMIT_ALL out
+   !
+  !
+ !
+ vrf DSL_AUTH
+  rd 30722:1031101035
+  address-family ipv4 unicast
+   redistribute connected route-policy DSL_AUTH_CONNECTED_TO_BGP
+   redistribute static route-policy DSL_AUTH_STATIC_TO_BGP
+  !
+ !
+ vrf DSL_DATA
+  rd 30722:1003101035
+  address-family ipv4 unicast
+  !
+  neighbor 10.177.21.26
+   remote-as 65540
+   address-family ipv4 unicast
+    send-community-ebgp
+    route-policy PERMIT_ENE_NOC in
+    maximum-prefix 5000 50
+    route-policy DSL_TO_ENE_NOC out
+   !
+  !
+ !
+ vrf INTERNET
+  rd 30722:1796101035
+  address-family ipv4 unicast
+   redistribute connected route-policy INTERNET_CONNECTED_TO_BGP
+  !
+  address-family ipv6 unicast
+  !
+  neighbor 10.177.21.74
+   remote-as 30722
+   password encrypted 09624B1E2B3737302C3C
+   description toward MIFSN030, Z1 ipv4 traffic
+   update-source GigabitEthernet0/0/0/4.995
+   address-family ipv4 unicast
+    route-policy SN_TO_INTERNET_Ingress in
+    maximum-prefix 20000 75
+    route-policy PERMIT_ALL_SET_COMMUNITY out
+    next-hop-self
+   !
+  !
+  neighbor 2a01:8d0:e:202:1::b
+   remote-as 30722
+   password encrypted 09624B1E2B3737302C3C
+   description toward MIFSN030, Z1 ipv6 traffic
+   update-source GigabitEthernet0/0/0/4.995
+   address-family ipv6 unicast
+    route-policy IPv6_SN_TO_INTERNET_Ingress in
+    maximum-prefix 20000 75
+    route-policy PERMIT_ALL_IPv6_SET_COMMUNITY out
+    next-hop-self
+   !
+  !
+ !
+ vrf MANAGEMENT
+  rd 30722:1021101035
+  address-family ipv4 unicast
+   redistribute static route-policy MANAGEMENT_STATIC_TO_BGP
+  !
+  address-family ipv6 unicast
+  !
+  neighbor 10.178.144.226
+   remote-as 65540
+   address-family ipv4 unicast
+    route-policy MGMT_FROM_OPNET in
+    route-policy PERMIT_ALL out
+   !
+  !
+ !
+ vrf VIPNET_OAM
+  rd 30722:1023101035
+  address-family ipv4 unicast
+   redistribute connected route-policy VIPNET_OAM_CONNECTED_TO_BGP
+   redistribute ospf 249 match internal external nssa-external route-policy VIPNET_OAM_OSPF_TO_BGP
+  !
+  address-family ipv6 unicast
+   redistribute ospfv3 249 match internal external nssa-external route-policy IPV6_VIPNET_OAM_OSPF_TO_BGP
+  !
+ !
+ vrf UNTRUSTED_MGMT
+  rd 30722:1141101035
+  address-family ipv4 unicast
+  !
+  neighbor 10.178.33.242
+   remote-as 65540
+   description eBGP session to CE MIVMX096 UNTRUSTED_MGMT
+   update-source GigabitEthernet0/0/0/6.851
+   address-family ipv4 unicast
+    route-policy UNTRUSTED_MGMT_FROM_LS in
+    route-policy PERMIT_ALL out
+   !
+  !
+ !
+!
+l2vpn
+ xconnect group BNG_E-LINE_Overlay
+  p2p MIBNG037_E-LINE_Overlay
+   interface GigabitEthernet0/0/0/3.1037
+   interface GigabitEthernet0/0/0/5.1037
+  !
+ !
+!
+router hsrp
+ interface Bundle-Ether731.71
+  hsrp delay minimum 15 reload 200
+  address-family ipv4
+   hsrp 51
+    preempt
+    address 10.178.189.209
+   !
+  !
+ !
+ interface Bundle-Ether731.72
+  hsrp delay minimum 15 reload 200
+  address-family ipv4
+   hsrp 52
+    preempt
+    address 10.176.26.17
+   !
+  !
+ !
+ interface GigabitEthernet0/0/0/8.50
+  hsrp delay minimum 15 reload 200
+  address-family ipv4
+   hsrp 50
+    timers 1 3
+    preempt
+    priority 110
+    address 83.224.109.227
+   !
+  !
+ !
+ interface GigabitEthernet0/0/0/8.100
+  hsrp delay minimum 15 reload 200
+  address-family ipv4
+   hsrp 100
+    timers 1 3
+    preempt
+    priority 100
+    address 10.192.38.235
+   !
+  !
+ !
+!
+mpls oam
+!
+multicast-routing
+ address-family ipv4
+  interface Loopback0
+   enable
+  !
+  interface GigabitEthernet0/0/0/0
+   enable
+  !
+  interface GigabitEthernet0/0/0/1
+   enable
+  !
+ !
+!
+segment-routing
+ global-block 16000 23999
+ traffic-eng
+  interface GigabitEthernet0/0/0/0
+   affinity
+    name BLU
+   !
+   metric 1000
+  !
+  interface GigabitEthernet0/0/0/1
+   metric 1000
+  !
+  binding-sid explicit enforce-srlb
+  affinity-map
+   name BLU bit-position 0
+   name RED bit-position 1
+  !
+  pcc
+   pce address ipv4 10.176.2.20
+    password encrypted 00071216144E0805062F43
+   !
+   pce address ipv4 10.176.2.77
+    password encrypted 094F4F190910141102020B
+   !
+   report-all
+  !
+ !
+!
+telemetry model-driven
+ destination-group DGROUP1
+  address-family ipv4 172.16.1.83 port 5432
+   encoding self-describing-gpb
+   protocol tcp
+  !
+ !
+ sensor-group datarate1
+  sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface/latest/data-rate
+ !
+ subscription datarate1
+  sensor-group-id datarate1 sample-interval 3000
+  destination-id DGROUP1
+ !
+!
+lldp
+!
+router pim
+!
+ssh server dscp 34
+ssh server rate-limit 10
+ssh server session-limit 10
+ssh server v2
+ssh server vrf default
+router eigrp 100
+ address-family ipv4
+  interface GigabitEthernet0/0/0/1
+  !
+ !
+!
+end
